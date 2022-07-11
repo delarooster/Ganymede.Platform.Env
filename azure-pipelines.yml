@@ -1,0 +1,293 @@
+trigger:
+  branches:
+    include:
+      - sandbox
+      - develop
+      - test
+      - staging
+      - master
+pr: none
+
+variables:
+  - name: clientAffix
+    value: NASA
+  - name: projectAffix
+    value: Emblazen
+  - name: componentAffix
+    value: BC
+  - name: projectsToPublish
+    value: |
+      **/*/BC.Ganymede.Transformation.Fa/BC.Ganymede.Transformation.Fa.csproj
+  - name: qualifyProjectAffix
+    value: false
+  - name: bicepTemplatePath
+    value: 'env/azuredeploy.bicep'
+  - template: variables/variables.yml
+  - group: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+
+parameters:
+- name: brn_pool
+  displayName: Build Pool
+  default: 'windows-latest'
+  values:
+    - windows-latest
+    - vs2017-win2016
+    - ubuntu-latest
+    - ubuntu-16.04
+    - SelfBuild
+- name: RunPostDeploymentScripts
+  displayName: Run post deployment scripts
+  type: boolean
+  default: false
+- name: InitializeIoTCentral
+  displayName: Initialize IoT Central
+  type: boolean
+  default: false
+- name: CreateAdminUser
+  type: boolean
+  default: false
+- name: AdminUserEmail
+  displayName: Admin user email
+  type: string
+  default: insert_admin_email
+- name: AdminUserObjectId
+  displayName: Admin user object id
+  type: string
+  default: insert_admin_objectId
+- name: DeployInfrastructure
+  displayName: Deploy infrastructure
+  type: boolean
+  default: true
+- name: DebugDeployment
+  displayName: Debug deployment
+  type: boolean
+  default: false
+- name: DeploymentMode
+  displayName: Deployment mode
+  type: string
+  default: 'incremental'
+  values:
+    - 'incremental'
+    - 'complete'
+
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Empty
+    steps:
+    - powershell: Write-host "Placeholder job"
+
+# : Sandbox environment deployment
+- template: pipelines/deploy.yml
+  parameters:
+    region: USA
+    resourceGroupLocation: 'centralus'
+    appId: 5371
+    env: Sd
+    azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+    bicepTemplatePath: ${{ variables.bicepTemplatePath }}
+    clientAffix: $(clientAffix)
+    conditionForDeployment: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/sandbox'))
+    debugDeployment: false
+    deployEnvInfrastructure: ${{parameters.DeployInfrastructure}}
+    deploymentMode: 'incremental'
+    environmentName: ${{ variables.environmentName }}
+    env_descriptor: ${{ variables.environment_descriptor }}
+    projectAffix: ${{ variables.APP_ID }}
+    qualifyProjectAffix: ${{ eq(variables.qualifyProjectAffix, true) }}
+    resourceGroup: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-CUS01') }}
+    vmImageLabel: 'ubuntu-latest'
+    variableGroup: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+    additionalBicepParameters: |
+      appId="${{ variables.APP_ID }}" cuaGuid="$(cuaGuid)"
+    deploymentSteps:
+      - template: pipelines/deployment-steps.yml
+        parameters:
+          azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+          initializeIoTCentral: ${{ parameters.InitializeIoTCentral }}
+          createAdminUser: ${{ parameters.CreateAdminUser }}
+          adminUserEmail: ${{ parameters.AdminUserEmail }}
+          adminUserObjectId: ${{ parameters.AdminUserObjectId }}
+          tenantId: ${{ variables.tenantId }}
+          subscriptionId: ${{ variables.subscriptionId }}
+          runPostDeploymentScripts: ${{ parameters.RunPostDeploymentScripts }}
+          resourceGroupName: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-CUS01') }}
+
+- template: pipelines/deploy.yml
+  parameters:
+    region: AUS
+    resourceGroupLocation: 'australiaeast'
+    appId: 5371
+    env: Sd
+    azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+    bicepTemplatePath: ${{ variables.bicepTemplatePath }}
+    clientAffix: $(clientAffix)
+    conditionForDeployment: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/sandbox'))
+    debugDeployment: false
+    deployEnvInfrastructure: ${{parameters.DeployInfrastructure}}
+    deploymentMode: 'incremental'
+    environmentName: ${{ variables.environmentName }}
+    env_descriptor: ${{ variables.environment_descriptor }}
+    projectAffix: ${{ variables.APP_ID }}
+    qualifyProjectAffix: ${{ eq(variables.qualifyProjectAffix, true) }}
+    resourceGroup: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-AE01') }}
+    vmImageLabel: 'ubuntu-latest'
+    variableGroup: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+    additionalBicepParameters: |
+      appId="${{ variables.APP_ID }}" cuaGuid="$(cuaGuid)"
+    deploymentSteps:
+      - template: pipelines/deployment-steps.yml
+        parameters:
+          azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+          initializeIoTCentral: ${{ parameters.InitializeIoTCentral }}
+          createAdminUser: ${{ parameters.CreateAdminUser }}
+          adminUserEmail: ${{ parameters.AdminUserEmail }}
+          adminUserObjectId: ${{ parameters.AdminUserObjectId }}
+          tenantId: ${{ variables.tenantId }}
+          subscriptionId: ${{ variables.subscriptionId }}
+          runPostDeploymentScripts: ${{ parameters.RunPostDeploymentScripts }}
+          resourceGroupName: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-AE01') }}
+
+# : Develop environment deployment
+- template: pipelines/deploy.yml
+  parameters:
+    region: USA
+    resourceGroupLocation: 'centralus'
+    appId: 5768
+    env: Dv
+    azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+    bicepTemplatePath: ${{ variables.bicepTemplatePath }}
+    clientAffix: $(clientAffix)
+    conditionForDeployment: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    debugDeployment: false
+    deployEnvInfrastructure: ${{parameters.DeployInfrastructure}}
+    deploymentMode: 'incremental'
+    environmentName: ${{ variables.environmentName }}
+    env_descriptor: ${{ variables.environment_descriptor }}
+    projectAffix: ${{ variables.APP_ID }}
+    qualifyProjectAffix: ${{ eq(variables.qualifyProjectAffix, true) }}
+    resourceGroup: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-CUS01') }}
+    vmImageLabel: 'ubuntu-latest'
+    variableGroup: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+    additionalBicepParameters: |
+      appId="${{ variables.APP_ID }}" cuaGuid="$(cuaGuid)"
+    deploymentSteps:
+      - template: pipelines/deployment-steps.yml
+        parameters:
+          azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+          initializeIoTCentral: ${{ parameters.InitializeIoTCentral }}
+          createAdminUser: ${{ parameters.CreateAdminUser }}
+          adminUserEmail: ${{ parameters.AdminUserEmail }}
+          adminUserObjectId: ${{ parameters.AdminUserObjectId }}
+          tenantId: ${{ variables.tenantId }}
+          subscriptionId: ${{ variables.subscriptionId }}
+          runPostDeploymentScripts: ${{ parameters.RunPostDeploymentScripts }}
+          resourceGroupName: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-CUS01') }}
+
+- template: pipelines/deploy.yml
+  parameters:
+    region: AUS
+    resourceGroupLocation: 'australiaeast'
+    appId: 5768
+    env: Dv
+    azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+    bicepTemplatePath: ${{ variables.bicepTemplatePath }}
+    clientAffix: $(clientAffix)
+    conditionForDeployment: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    debugDeployment: false
+    deployEnvInfrastructure: ${{parameters.DeployInfrastructure}}
+    deploymentMode: 'incremental'
+    environmentName: ${{ variables.environmentName }}
+    env_descriptor: ${{ variables.environment_descriptor }}
+    projectAffix: ${{ variables.APP_ID }}
+    qualifyProjectAffix: ${{ eq(variables.qualifyProjectAffix, true) }}
+    resourceGroup: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-AE01') }}
+    vmImageLabel: 'ubuntu-latest'
+    variableGroup: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+    additionalBicepParameters: |
+      appId="${{ variables.APP_ID }}" cuaGuid="$(cuaGuid)"
+    deploymentSteps:
+      - template: pipelines/deployment-steps.yml
+        parameters:
+          azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+          initializeIoTCentral: ${{ parameters.InitializeIoTCentral }}
+          createAdminUser: ${{ parameters.CreateAdminUser }}
+          adminUserEmail: ${{ parameters.AdminUserEmail }}
+          adminUserObjectId: ${{ parameters.AdminUserObjectId }}
+          tenantId: ${{ variables.tenantId }}
+          subscriptionId: ${{ variables.subscriptionId }}
+          runPostDeploymentScripts: ${{ parameters.RunPostDeploymentScripts }}
+          resourceGroupName: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-N-AE01') }}
+
+# : Production environment deployments
+- template: pipelines/deploy.yml
+  parameters:
+    region: USA
+    resourceGroupLocation: 'centralus'
+    appId: 5372
+    env: Pd
+    azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+    bicepTemplatePath: ${{ variables.bicepTemplatePath }}
+    clientAffix: $(clientAffix)
+    conditionForDeployment: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))
+    debugDeployment: false
+    deployEnvInfrastructure: ${{parameters.DeployInfrastructure}}
+    deploymentMode: 'incremental'
+    environmentName: ${{ variables.environmentName }}
+    env_descriptor: ${{ variables.environment_descriptor }}
+    projectAffix: ${{ variables.APP_ID }}
+    qualifyProjectAffix: ${{ eq(variables.qualifyProjectAffix, true) }}
+    resourceGroup: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-P-CUS01') }}
+    vmImageLabel: 'ubuntu-latest'
+    variableGroup: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+    additionalBicepParameters: |
+      appId="${{ variables.APP_ID }}" cuaGuid="$(cuaGuid)"
+    deploymentSteps:
+      - template: pipelines/deployment-steps.yml
+        parameters:
+          azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+          initializeIoTCentral: ${{ parameters.InitializeIoTCentral }}
+          createAdminUser: ${{ parameters.CreateAdminUser }}
+          adminUserEmail: ${{ parameters.AdminUserEmail }}
+          adminUserObjectId: ${{ parameters.AdminUserObjectId }}
+          tenantId: ${{ variables.tenantId }}
+          subscriptionId: ${{ variables.subscriptionId }}
+          runPostDeploymentScripts: ${{ parameters.RunPostDeploymentScripts }}
+          resourceGroupName: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-P-CUS01') }}
+
+- template: pipelines/deploy.yml
+  parameters:
+    region: AUS
+    resourceGroupLocation: 'australiaeast'
+    appId: 5372
+    env: Pd
+    azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+    bicepTemplatePath: ${{ variables.bicepTemplatePath }}
+    clientAffix: $(clientAffix)
+    conditionForDeployment: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))
+    debugDeployment: false
+    deployEnvInfrastructure: ${{parameters.DeployInfrastructure}}
+    deploymentMode: 'incremental'
+    environmentName: ${{ variables.environmentName }}
+    env_descriptor: ${{ variables.environment_descriptor }}
+    projectAffix: ${{ variables.APP_ID }}
+    qualifyProjectAffix: ${{ eq(variables.qualifyProjectAffix, true) }}
+    resourceGroup: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-P-AE01') }}
+    vmImageLabel: 'ubuntu-latest'
+    variableGroup: ${{ format('{0}_{1}_{2}', 'Ganymede', 'BC', 'develop') }}
+    additionalBicepParameters: |
+      appId="${{ variables.APP_ID }}" cuaGuid="$(cuaGuid)"
+    deploymentSteps:
+      - template: pipelines/deployment-steps.yml
+        parameters:
+          azureSubscriptionSvcCxn: ${{ variables.servicePrincipal }}
+          initializeIoTCentral: ${{ parameters.InitializeIoTCentral }}
+          createAdminUser: ${{ parameters.CreateAdminUser }}
+          adminUserEmail: ${{ parameters.AdminUserEmail }}
+          adminUserObjectId: ${{ parameters.AdminUserObjectId }}
+          tenantId: ${{ variables.tenantId }}
+          subscriptionId: ${{ variables.subscriptionId }}
+          runPostDeploymentScripts: ${{ parameters.RunPostDeploymentScripts }}
+          resourceGroupName: ${{ format('{0}{1}{2}', 'RG-NASA-APP', variables.APP_ID, '-P-AE01') }}

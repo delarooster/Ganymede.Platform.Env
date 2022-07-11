@@ -1,0 +1,39 @@
+variables:
+
+## global non-prod variables
+- name: environmentName
+  value: 'Infrastructure_Non_Prod'
+- name: servicePrincipal
+  value: NASA_Ganymede_Dev
+- name: subscriptionId
+  value: cb70135b-a87f-47c4-adc2-9e172bc22f88
+- name: tenantId
+  value: d49110b2-6f26-4c66-b723-1729cdb9a3cf
+- name: environment_descriptor
+  value: 'non_production'
+
+- ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/sandbox') }}:
+  - name: APP_ID
+    value: 5371
+  
+- ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/develop') }}:
+  - name: APP_ID
+    value: 5768
+
+- ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/test') }}:
+  - name: APP_ID
+    value: 5767
+
+- ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/staging') }}:
+  - name: APP_ID
+    value: 5373
+
+- ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+  - name: APP_ID
+    value: 5372
+  - name: servicePrincipal
+    value: NASA_Ganymede_Dev #TODO Update for Prod
+  - name: environmentName
+    value: 'Infrastructure_Non_Prod' #TODO Update for Prod
+  - name: environment_descriptor
+    value: 'production'
